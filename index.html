@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THE BACKROOMS</title>
+<style>
+  :root { --amber: #e7d27a; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  body { font-family: "Courier New", ui-monospace, monospace; color: #e8ddb0; }
+  canvas#view { position: fixed; inset: 0; display: block; }
+
+  /* ---------- found-footage layer ---------- */
+  #fx { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  #fx .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.42) 100%);
+  }
+  #fx .scanlines {
+    position: absolute; inset: 0; opacity: 0.05;
+    background: repeating-linear-gradient(0deg, #000 0px, #000 1px, transparent 2px, transparent 4px);
+  }
+  canvas#grain { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.055; image-rendering: pixelated; }
+  #rec {
+    position: absolute; top: 18px; left: 22px; font-size: 13px; letter-spacing: 2px;
+    color: #ffdfae; text-shadow: 0 0 6px rgba(0,0,0,.8);
+  }
+  #rec .dot { color: #ff3b30; animation: blink 1.2s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    position: fixed; left: 22px; bottom: 18px; z-index: 6; pointer-events: none;
+    font-size: 12px; letter-spacing: 2px; line-height: 1.8;
+    color: rgba(238, 222, 162, 0.85); text-shadow: 0 0 8px rgba(0,0,0,.9);
+    text-transform: uppercase;
+  }
+  #crosshair {
+    position: fixed; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px;
+    background: rgba(255, 248, 220, 0.55); border-radius: 50%; z-index: 6; pointer-events: none;
+  }
+  #subtitle {
+    position: fixed; left: 50%; bottom: 12%; transform: translateX(-50%); z-index: 6;
+    max-width: 60ch; text-align: center; font-style: italic; font-size: 15px;
+    color: rgba(235, 225, 190, 0.92); text-shadow: 0 1px 10px rgba(0,0,0,.95);
+    opacity: 0; transition: opacity .6s; pointer-events: none; padding: 0 16px;
+  }
+  #toast {
+    position: fixed; left: 50%; top: 14%; transform: translateX(-50%); z-index: 6;
+    font-size: 13px; letter-spacing: 3px; text-transform: lowercase;
+    color: rgba(240, 230, 200, 0.9); text-shadow: 0 0 10px rgba(0,0,0,.9);
+    opacity: 0; transition: opacity .8s; pointer-events: none; text-align: center;
+  }
+
+  /* ---------- fade / level card ---------- */
+  #fade {
+    position: fixed; inset: 0; background: #000; z-index: 20; opacity: 0;
+    pointer-events: none; transition: opacity .35s;
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+  }
+  #fade.on { opacity: 1; pointer-events: all; }
+  #fade .lvl { font-size: 42px; letter-spacing: 14px; color: #cfc08a; opacity: 0; transition: opacity .5s; }
+  #fade .lvlname { font-size: 13px; letter-spacing: 6px; color: #7d7257; opacity: 0; transition: opacity .5s; }
+  #fade.label .lvl, #fade.label .lvlname { opacity: 1; }
+
+  /* ---------- the map (pen on a legal pad) ---------- */
+  #map {
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -52%) rotate(-0.7deg);
+    z-index: 18; display: none;
+    background: #eae1b6;
+    border: 1px solid #b4a878;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.8), inset 0 0 60px rgba(140,110,40,0.12);
+  }
+  #map.on { display: block; }
+
+  /* ---------- ending ---------- */
+  #ending {
+    position: fixed; inset: 0; z-index: 45; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; text-align: center;
+    background: radial-gradient(ellipse at 50% 40%, rgba(235, 240, 235, 0.97), rgba(208, 218, 208, 0.99));
+    color: #2c3530;
+  }
+  #ending.on { display: flex; }
+  #ending h2 { font-size: clamp(26px, 5vw, 44px); letter-spacing: 0.3em; font-weight: 400; }
+  #ending .out-sub { font-size: 14px; letter-spacing: 4px; color: #5c6a60; }
+  #end-stats { font-size: 13px; line-height: 2.1; letter-spacing: 2px; color: #47554c; }
+  #ending .kicker { font-size: 13px; font-style: italic; color: #6e7a70; margin-top: 6px; }
+  #back-in {
+    margin-top: 14px; background: none; border: 1px solid #5c6a60; color: #2c3530;
+    font-family: inherit; font-size: 13px; letter-spacing: 4px; padding: 12px 26px; cursor: pointer;
+  }
+  #back-in:hover { background: #2c3530; color: #e8ece8; }
+
+  /* ---------- start screen ---------- */
+  #start {
+    position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 22px; cursor: pointer;
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(120, 100, 40, 0.25), transparent 60%),
+      linear-gradient(#060503, #0b0905 60%, #060503);
+  }
+  #start h1 { font-size: clamp(34px, 7vw, 64px); letter-spacing: 0.35em; color: #d9c779; font-weight: 400; text-shadow: 0 0 40px rgba(217,199,121,.25); }
+  #start .sub { font-size: 13px; letter-spacing: 5px; color: #8d7f57; }
+  #start .controls { font-size: 12px; line-height: 2.1; letter-spacing: 2px; color: #a4955f; text-align: center; }
+  #start .controls b { color: #ddcb85; font-weight: 400; }
+  #start .enter { margin-top: 8px; font-size: 14px; letter-spacing: 6px; color: #efe2a8; animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  #start .memo { font-size: 11px; letter-spacing: 1px; color: #6d6244; }
+  #forget {
+    margin-top: 4px; background: none; border: 1px solid #4a4128; color: #877a4e;
+    font-family: inherit; font-size: 11px; letter-spacing: 2px; padding: 6px 14px; cursor: pointer;
+  }
+  #forget:hover { color: #d8c87e; border-color: #877a4e; }
+  #resume-hint { display: none; }
+
+  /* ---------- memory input ---------- */
+  #memory {
+    position: fixed; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center;
+    background: rgba(2, 2, 1, 0.78); backdrop-filter: blur(2px);
+  }
+  #memory.on { display: flex; }
+  #memory .box { width: min(560px, 88vw); display: flex; flex-direction: column; gap: 14px; }
+  #memory label { font-size: 13px; letter-spacing: 4px; color: #c9b878; text-transform: lowercase; }
+  #memory textarea {
+    width: 100%; height: 110px; resize: none; background: rgba(20, 17, 8, 0.9);
+    border: 1px solid #5d5232; color: #ecdfae; font-family: inherit; font-size: 16px;
+    padding: 14px; outline: none; letter-spacing: 1px;
+  }
+  #memory textarea:focus { border-color: #9c8b54; }
+  #memory .hint { font-size: 11px; letter-spacing: 2px; color: #776a42; }
+</style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <div id="fx">
+    <canvas id="grain"></canvas>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div id="rec"><span class="dot">●</span> REC <span id="rec-time">00:00</span> &nbsp; 2/29/1990</div>
+  </div>
+
+  <div id="crosshair" style="display:none"></div>
+  <div id="hud"></div>
+  <div id="subtitle"></div>
+  <div id="toast"></div>
+
+  <div id="fade"><div class="lvl"></div><div class="lvlname"></div></div>
+
+  <div id="ending">
+    <h2>YOU FOUND THE WAY OUT</h2>
+    <div class="out-sub">the door closed behind you. the hum stopped.</div>
+    <div id="end-stats"></div>
+    <div class="kicker">it kept your memories. they are still in there.</div>
+    <button id="back-in">GO BACK IN</button>
+  </div>
+
+  <canvas id="map"></canvas>
+
+  <div id="memory">
+    <div class="box">
+      <label>give it a memory. it will keep it.</label>
+      <textarea id="memory-text" maxlength="280" placeholder="a place, a person, a day you can't get back…"></textarea>
+      <div class="hint">ENTER — give it away &nbsp;&nbsp;·&nbsp;&nbsp; ESC — keep it</div>
+    </div>
+  </div>
+
+  <div id="start">
+    <h1>THE BACKROOMS</h1>
+    <div class="sub">it has been waiting for you</div>
+    <div class="controls">
+      <b>WASD</b> walk &nbsp; <b>MOUSE</b> look &nbsp; <b>SHIFT</b> run &nbsp; <b>SPACE</b> jump<br/>
+      <b>M</b> give it a memory &nbsp; <b>TAB</b> your map &nbsp; <b>C</b> flashlight &nbsp; <b>V</b> camcorder &nbsp; <b>ESC</b> pause<br/>
+      three green doors stand between you and home. find them.<br/>
+      the notes will help you. some of the notes will lie.<br/>
+      if you hear it coming — <b>run</b>. it cannot enter the copied rooms.
+    </div>
+    <div class="enter">CLICK TO NOCLIP</div>
+    <div class="memo" id="memo-line"></div>
+    <button id="forget">make it forget everything</button>
+  </div>
+
+  <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

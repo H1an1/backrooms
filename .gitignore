@@ -1,0 +1,18 @@
+.DS_Store
+
+# ---- assets not distributable with the code ----
+# music: drop your own mp3s here as track1.mp3 … track9.mp3 (see README)
+assets/music/
+# the lobby theme — same deal: bring your own
+assets/six-forty-seven.mp3
+# third-party 3D reference assets (unverified licenses; not needed at runtime)
+assets/backrooms_vr.glb
+assets/layer0/
+# film reference frames (not ours to publish)
+ref/
+
+# QA output artifacts
+qa/*.png
+node_modules/
+# dev screenshots (the game generates all textures procedurally — no pngs needed)
+assets/*.png
